@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/admin/ToastProvider";
 import type { SiteSettings } from "@/lib/server/site-settings";
 
 type SiteSettingsFormProps = {
@@ -9,14 +10,13 @@ type SiteSettingsFormProps = {
 };
 
 export function SiteSettingsForm({ initial, editions }: SiteSettingsFormProps) {
+  const { success, error: toastError } = useToast();
   const [settings, setSettings] = useState(initial);
-  const [status, setStatus] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
-    setStatus(null);
 
     const res = await fetch("/api/admin/site-settings", {
       method: "PATCH",
@@ -26,7 +26,11 @@ export function SiteSettingsForm({ initial, editions }: SiteSettingsFormProps) {
     });
 
     setSaving(false);
-    setStatus(res.ok ? "Homepage settings saved." : "Could not save settings.");
+    if (res.ok) {
+      success("Homepage settings saved.");
+    } else {
+      toastError("Could not save settings.");
+    }
   }
 
   return (
@@ -90,10 +94,6 @@ export function SiteSettingsForm({ initial, editions }: SiteSettingsFormProps) {
       >
         {saving ? "Saving…" : "Save homepage settings"}
       </button>
-
-      {status ? (
-        <p className="text-sm text-muted">{status}</p>
-      ) : null}
     </form>
   );
 }

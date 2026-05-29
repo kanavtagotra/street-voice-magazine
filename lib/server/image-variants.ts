@@ -1,5 +1,3 @@
-import { promises as fs } from "fs";
-import path from "path";
 import sharp from "sharp";
 import {
   COVER_VARIANTS,
@@ -8,21 +6,16 @@ import {
   type PageVariant,
 } from "@/lib/magazine-assets";
 import {
-  editionCoverPath,
-  editionCoverPathLegacy,
-  editionPagePath,
-  editionPagePathLegacy,
-} from "@/lib/server/paths";
+  readCoverVariant,
+  readPageVariant,
+  writeCoverVariant,
+  writePageVariant,
+} from "@/lib/server/asset-store";
 
 type VariantConfig = { width: number; quality: number; effort: number };
 
-async function writeWebpVariant(
-  input: Buffer,
-  outPath: string,
-  config: VariantConfig,
-) {
-  await fs.mkdir(path.dirname(outPath), { recursive: true });
-  await sharp(input)
+async function renderWebpVariant(input: Buffer, config: VariantConfig): Promise<Buffer> {
+  return sharp(input)
     .rotate()
     .resize({
       width: config.width,
@@ -34,76 +27,51 @@ async function writeWebpVariant(
       effort: config.effort,
       smartSubsample: true,
     })
-    .toFile(outPath);
+    .toBuffer();
 }
 
 export async function generatePageVariants(
-  storageRoot: string,
+  editionId: string,
   pageNum: number,
   pngBuffer: Buffer,
+  storageRoot?: string,
 ) {
   for (const [variant, config] of Object.entries(PAGE_VARIANTS) as [
     PageVariant,
     VariantConfig,
   ][]) {
-    await writeWebpVariant(
-      pngBuffer,
-      editionPagePath(storageRoot, pageNum, variant),
-      config,
-    );
+    const webp = await renderWebpVariant(pngBuffer, config);
+    await writePageVariant(editionId, pageNum, variant, webp, storageRoot);
   }
 }
 
-export async function generateCoverVariants(storageRoot: string, pngBuffer: Buffer) {
+export async function generateCoverVariants(
+  editionId: string,
+  pngBuffer: Buffer,
+  storageRoot?: string,
+) {
   for (const [variant, config] of Object.entries(COVER_VARIANTS) as [
     CoverVariant,
     VariantConfig,
   ][]) {
-    await writeWebpVariant(
-      pngBuffer,
-      editionCoverPath(storageRoot, variant),
-      config,
-    );
+    const webp = await renderWebpVariant(pngBuffer, config);
+    await writeCoverVariant(editionId, variant, webp, storageRoot);
   }
 }
 
 export async function resolvePageFile(
-  storageRoot: string,
+  editionId: string,
   pageNum: number,
   variant: PageVariant,
+  storageRoot?: string,
 ): Promise<Buffer | null> {
-  const candidates = [
-    editionPagePath(storageRoot, pageNum, variant),
-    editionPagePath(storageRoot, pageNum, "desktop"),
-    editionPagePathLegacy(storageRoot, pageNum),
-  ];
-
-  for (const filePath of candidates) {
-    try {
-      return await fs.readFile(filePath);
-    } catch {
-      continue;
-    }
-  }
-  return null;
+  return readPageVariant(editionId, pageNum, variant, storageRoot);
 }
 
 export async function resolveCoverFile(
-  storageRoot: string,
+  editionId: string,
   variant: CoverVariant,
+  storageRoot?: string,
 ): Promise<Buffer | null> {
-  const candidates = [
-    editionCoverPath(storageRoot, variant),
-    editionCoverPath(storageRoot, "desktop"),
-    editionCoverPathLegacy(storageRoot),
-  ];
-
-  for (const filePath of candidates) {
-    try {
-      return await fs.readFile(filePath);
-    } catch {
-      continue;
-    }
-  }
-  return null;
+  return readCoverVariant(editionId, variant, storageRoot);
 }

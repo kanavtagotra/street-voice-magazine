@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useToast } from "@/components/admin/ToastProvider";
 
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -11,17 +12,22 @@ type UploadResponse = {
   success?: boolean;
   error?: string;
   details?: string;
-  edition?: { id: string; pageCount: number };
+  edition?: { id: string; pageCount: number; status?: string };
   stats?: { processingTimeMs: number; storageBytes: number };
   log?: { step: string; detail?: string; at: string }[];
 };
 
 export function AdminUploadForm() {
+  const { success, error: toastError } = useToast();
   const [title, setTitle] = useState("");
   const [headline, setHeadline] = useState("");
   const [summary, setSummary] = useState("");
   const [editionId, setEditionId] = useState("");
+  const [publishedAt, setPublishedAt] = useState(
+    () => new Date().toISOString().slice(0, 10),
+  );
   const [setAsCurrent, setSetAsCurrent] = useState(true);
+  const [publishNow, setPublishNow] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -30,20 +36,23 @@ export function AdminUploadForm() {
   const [uploadPercent, setUploadPercent] = useState(0);
   const [phase, setPhase] = useState<"idle" | "uploading" | "processing">("idle");
 
-  const onFile = useCallback((next: File | null) => {
-    if (next && !next.name.toLowerCase().endsWith(".pdf")) {
-      setStatus("Only PDF files are supported.");
-      return;
-    }
-    setFile(next);
-    setStatus(null);
-  }, []);
+  const onFile = useCallback(
+    (next: File | null) => {
+      if (next && !next.name.toLowerCase().endsWith(".pdf")) {
+        toastError("Only PDF files are supported.");
+        return;
+      }
+      setFile(next);
+      setStatus(null);
+    },
+    [toastError],
+  );
 
   const onSubmit = useCallback(
     (event: React.FormEvent) => {
       event.preventDefault();
       if (!file) {
-        setStatus("Please select a PDF file.");
+        toastError("Please select a PDF file.");
         return;
       }
 
@@ -60,6 +69,8 @@ export function AdminUploadForm() {
       formData.append("summary", summary);
       if (editionId) formData.append("id", editionId);
       formData.append("setAsCurrent", String(setAsCurrent));
+      formData.append("publishNow", String(publishNow));
+      formData.append("publishedAt", publishedAt);
 
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/admin/upload");
@@ -84,19 +95,22 @@ export function AdminUploadForm() {
         try {
           json = JSON.parse(xhr.responseText) as UploadResponse;
         } catch {
-          setStatus("Invalid server response");
+          toastError("Invalid server response");
           return;
         }
 
         if (xhr.status >= 200 && xhr.status < 300 && json.success) {
           setProcessingLog(json.log);
-          setStatus(
-            `Published! ${json.edition?.pageCount} pages · ${formatBytes(json.stats?.storageBytes ?? 0)} in ${((json.stats?.processingTimeMs ?? 0) / 1000).toFixed(1)}s`,
+          const label = publishNow ? "Published" : "Saved as draft";
+          success(
+            `${label}! ${json.edition?.pageCount} pages · ${formatBytes(json.stats?.storageBytes ?? 0)} in ${((json.stats?.processingTimeMs ?? 0) / 1000).toFixed(1)}s`,
           );
+          setStatus(null);
           setFile(null);
           return;
         }
 
+        toastError(json.error ?? `Upload failed (${xhr.status})`);
         setStatus(json.error ?? `Upload failed (${xhr.status})`);
         setErrorDetails(json.details ?? null);
         setProcessingLog(json.log);
@@ -104,12 +118,13 @@ export function AdminUploadForm() {
 
       xhr.onerror = () => {
         setPhase("idle");
+        toastError("Network error during upload");
         setStatus("Network error during upload");
       };
 
       xhr.send(formData);
     },
-    [file, title, headline, summary, editionId, setAsCurrent],
+    [file, title, headline, summary, editionId, setAsCurrent, publishNow, publishedAt, success, toastError],
   );
 
   const busy = phase !== "idle";
@@ -117,7 +132,7 @@ export function AdminUploadForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-5 rounded-2xl border border-border bg-card p-6 shadow-lg shadow-zinc-300/15 dark:shadow-black/25"
+      className="space-y-5 rounded-2xl border border-border bg-card p-5 shadow-lg shadow-zinc-300/15 dark:shadow-black/25 sm:p-6"
     >
       <div
         onDragOver={(e) => {
@@ -130,7 +145,7 @@ export function AdminUploadForm() {
           setDragOver(false);
           onFile(e.dataTransfer.files[0] ?? null);
         }}
-        className={`rounded-2xl border-2 border-dashed p-8 text-center transition duration-300 ${
+        className={`rounded-2xl border-2 border-dashed p-6 text-center transition duration-300 sm:p-8 ${
           dragOver
             ? "border-red-500/60 bg-red-50/50 dark:bg-red-950/20"
             : "border-border bg-card-muted"
@@ -173,15 +188,46 @@ export function AdminUploadForm() {
         />
       </div>
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={setAsCurrent}
-          onChange={(e) => setSetAsCurrent(e.target.checked)}
-          disabled={busy}
-        />
-        Set as current edition (archives previous automatically)
-      </label>
+      <Field
+        label="Edition date"
+        type="date"
+        value={publishedAt}
+        onChange={setPublishedAt}
+        disabled={busy}
+      />
+
+      <div className="space-y-3 rounded-xl border border-border bg-card-muted p-4">
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={setAsCurrent}
+            onChange={(e) => setSetAsCurrent(e.target.checked)}
+            disabled={busy}
+            className="mt-0.5"
+          />
+          <span>
+            <span className="font-medium">Set as current edition</span>
+            <span className="mt-0.5 block text-xs text-muted">
+              Archives the previous current issue automatically
+            </span>
+          </span>
+        </label>
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={publishNow}
+            onChange={(e) => setPublishNow(e.target.checked)}
+            disabled={busy}
+            className="mt-0.5"
+          />
+          <span>
+            <span className="font-medium">Publish immediately</span>
+            <span className="mt-0.5 block text-xs text-muted">
+              Uncheck to save as draft — hidden from the public site until published
+            </span>
+          </span>
+        </label>
+      </div>
 
       {phase === "uploading" ? (
         <div className="h-2 overflow-hidden rounded-full bg-card-muted">
@@ -195,13 +241,15 @@ export function AdminUploadForm() {
       <button
         type="submit"
         disabled={busy}
-        className="w-full rounded-full bg-zinc-900 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-zinc-950"
+        className="w-full rounded-full bg-zinc-900 py-3.5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-zinc-950"
       >
         {phase === "uploading"
           ? `Uploading ${uploadPercent}%…`
           : phase === "processing"
             ? "Processing…"
-            : "Upload & publish"}
+            : publishNow
+              ? "Upload & publish"
+              : "Upload as draft"}
       </button>
 
       {status ? (
@@ -233,6 +281,7 @@ function Field({
   required,
   disabled,
   placeholder,
+  type = "text",
 }: {
   label: string;
   value: string;
@@ -240,6 +289,7 @@ function Field({
   required?: boolean;
   disabled?: boolean;
   placeholder?: string;
+  type?: string;
 }) {
   return (
     <div>
@@ -247,6 +297,7 @@ function Field({
         {label}
       </label>
       <input
+        type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}

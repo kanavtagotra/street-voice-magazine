@@ -1,16 +1,16 @@
-import { promises as fs } from "fs";
 import {
   archivePreviousCurrentEdition,
   clearEditionAssets,
-  getDirectorySizeBytes,
-} from "@/lib/server/edition-storage";
+  editionStorageRootForProcessing,
+  getEditionStorageBytes,
+  writeEditionMeta,
+} from "@/lib/server/asset-store";
 import { generateCoverVariants, generatePageVariants } from "@/lib/server/image-variants";
-import { editionMetaPath, editionStorageRoot } from "@/lib/server/paths";
-import { renderPdfPages } from "@/lib/server/pdf-render";
 import { ProcessingLog } from "@/lib/server/processing-log";
 import { readCatalog, upsertEdition } from "@/lib/server/catalog";
 import { PAGE_VARIANTS, COVER_VARIANTS } from "@/lib/magazine-assets";
-import type { EditionMetaFile } from "@/lib/types/magazine";
+import type { EditionMetaFile, EditionStatus } from "@/lib/types/magazine";
+import { renderPdfPages } from "@/lib/server/pdf-render";
 
 export type ProcessPdfInput = {
   id: string;
@@ -19,6 +19,9 @@ export type ProcessPdfInput = {
   summary: string;
   pdfBuffer: Buffer;
   setAsCurrent: boolean;
+  status?: EditionStatus;
+  publishedAt?: string;
+  preservePublishedAt?: boolean;
 };
 
 export type ProcessPdfResult = {
@@ -47,19 +50,16 @@ export async function processPdfMagazine(
 
   if (input.setAsCurrent) {
     const catalog = await readCatalog();
-    if (
-      catalog.currentEditionId &&
-      catalog.currentEditionId !== input.id
-    ) {
+    if (catalog.currentEditionId && catalog.currentEditionId !== input.id) {
       log.add("archive-previous", catalog.currentEditionId);
       await archivePreviousCurrentEdition(catalog.currentEditionId);
     }
   }
 
-  const storageRoot = editionStorageRoot(input.id, input.setAsCurrent);
+  const storageRoot = editionStorageRootForProcessing(input.id, input.setAsCurrent);
   log.add("storage-root", storageRoot);
 
-  await clearEditionAssets(storageRoot);
+  await clearEditionAssets(input.id, input.setAsCurrent);
   log.add("cleared-assets");
 
   const { pageCount, pages } = await renderPdfPages(input.pdfBuffer, {
@@ -74,37 +74,37 @@ export async function processPdfMagazine(
   for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
     const pngBuffer = pages[pageNum - 1];
     log.add("webp-page", `page ${pageNum}/${pageCount}`);
-    await generatePageVariants(storageRoot, pageNum, pngBuffer);
+    await generatePageVariants(input.id, pageNum, pngBuffer, storageRoot);
     if (pageNum === 1) coverPng = pngBuffer;
   }
 
   if (coverPng) {
     log.add("webp-cover", "extracted from page 1");
-    await generateCoverVariants(storageRoot, coverPng);
+    await generateCoverVariants(input.id, coverPng, storageRoot);
   }
 
   const processedAt = new Date().toISOString();
+  const status = input.status ?? "draft";
   const meta: EditionMetaFile = {
     id: input.id,
     title: input.title,
     headline: input.headline,
     summary: input.summary,
     pageCount,
-    publishedAt: processedAt,
+    publishedAt: input.publishedAt ?? processedAt,
+    status,
     processedAt,
     cacheVersion: processedAt,
-    assetPipeline: 3,
+    assetPipeline: 4,
     storageRoot,
   };
 
-  await fs.writeFile(
-    editionMetaPath(storageRoot),
-    JSON.stringify(meta, null, 2),
-    "utf-8",
-  );
-  await upsertEdition(meta, input.setAsCurrent);
+  await writeEditionMeta(input.id, meta);
+  await upsertEdition(meta, input.setAsCurrent, {
+    preservePublishedAt: input.preservePublishedAt,
+  });
 
-  const storageBytes = await getDirectorySizeBytes(storageRoot);
+  const storageBytes = await getEditionStorageBytes(input.id);
   log.add("done", `${storageBytes} bytes stored`);
 
   return {

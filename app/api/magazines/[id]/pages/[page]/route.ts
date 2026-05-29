@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readEditionMeta, resolveEditionStorageRoot } from "@/lib/server/catalog";
+import { isEditionPublished, readEditionMeta } from "@/lib/server/catalog";
 import { assetResponseHeaders } from "@/lib/server/cdn";
 import { resolvePageFile } from "@/lib/server/image-variants";
 import { isCurrentEdition } from "@/lib/server/magazine-access";
@@ -26,14 +26,17 @@ export async function GET(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Invalid page number" }, { status: 400 });
   }
 
-  const [meta, allowed, storageRoot] = await Promise.all([
+  const [meta, allowed] = await Promise.all([
     readEditionMeta(id),
     isCurrentEdition(id),
-    resolveEditionStorageRoot(id),
   ]);
 
   if (!meta) {
     return NextResponse.json({ error: "Edition not found" }, { status: 404 });
+  }
+
+  if (!isEditionPublished(meta)) {
+    return NextResponse.json({ error: "Edition not published" }, { status: 404 });
   }
 
   if (!allowed) {
@@ -43,15 +46,11 @@ export async function GET(request: NextRequest, { params }: Params) {
     );
   }
 
-  if (!storageRoot) {
-    return NextResponse.json({ error: "Edition assets not found" }, { status: 404 });
-  }
-
   if (pageNum > meta.pageCount) {
     return NextResponse.json({ error: "Page not found" }, { status: 404 });
   }
 
-  const file = await resolvePageFile(storageRoot, pageNum, variant);
+  const file = await resolvePageFile(id, pageNum, variant);
   if (!file) {
     return NextResponse.json({ error: "Page not found" }, { status: 404 });
   }

@@ -1,3 +1,5 @@
+export type EditionStatus = "draft" | "published";
+
 export type EditionRecord = {
   id: string;
   title: string;
@@ -5,6 +7,7 @@ export type EditionRecord = {
   summary: string;
   pageCount: number;
   publishedAt: string;
+  status: EditionStatus;
   isCurrent: boolean;
 };
 
@@ -20,6 +23,7 @@ export type EditionMetaFile = {
   summary: string;
   pageCount: number;
   publishedAt: string;
+  status: EditionStatus;
   processedAt: string;
   cacheVersion?: string;
   assetPipeline?: number;

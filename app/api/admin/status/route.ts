@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, forbiddenResponse } from "@/lib/auth/guards";
-import { readCatalog, resolveEditionStorageRoot } from "@/lib/server/catalog";
-import { getDirectorySizeBytes } from "@/lib/server/edition-storage";
+import { readCatalog } from "@/lib/server/catalog";
+import { getEditionStorageBytes, isBlobStorageEnabled } from "@/lib/server/asset-store";
 import { CURRENT_EDITION_DIR } from "@/lib/server/paths";
 
 export const runtime = "nodejs";
@@ -14,14 +14,10 @@ export async function GET(request: NextRequest) {
 
   const editions = await Promise.all(
     catalog.editions.map(async (e) => {
-      const storageRoot = await resolveEditionStorageRoot(e.id);
-      const storageBytes = storageRoot
-        ? await getDirectorySizeBytes(storageRoot)
-        : 0;
+      const storageBytes = await getEditionStorageBytes(e.id);
       return {
         ...e,
         isCurrent: e.id === catalog.currentEditionId,
-        storageRoot,
         storageBytes,
         storageMb: Math.round((storageBytes / 1024 / 1024) * 100) / 100,
       };
@@ -30,11 +26,13 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     currentEditionId: catalog.currentEditionId,
-    currentEditionPath: CURRENT_EDITION_DIR,
+    storageBackend: isBlobStorageEnabled() ? "vercel-blob" : "local",
+    currentEditionPath: isBlobStorageEnabled() ? null : CURRENT_EDITION_DIR,
     editions,
     accessRules: {
-      currentEdition: "Full read via /read (session-protected WebP)",
-      archiveEditions: "Cover image + metadata only",
+      currentEdition: "Published current edition readable at /read",
+      archiveEditions: "Published archive: cover + metadata only",
+      drafts: "Hidden from public site until published",
       pdfDownload: "Disabled — source PDF never stored",
     },
   });

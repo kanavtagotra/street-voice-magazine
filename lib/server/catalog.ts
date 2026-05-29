@@ -1,68 +1,44 @@
-import { promises as fs } from "fs";
-import path from "path";
-import type { EditionMetaFile, MagazineCatalog } from "@/lib/types/magazine";
+import type { EditionMetaFile, EditionRecord, EditionStatus, MagazineCatalog } from "@/lib/types/magazine";
 import {
-  ARCHIVE_DIR,
-  CATALOG_PATH,
-  CURRENT_EDITION_DIR,
-  STORAGE_ROOT,
-  editionMetaPath,
-  storageRootForEdition,
-} from "@/lib/server/paths";
+  readCatalog as readCatalogStore,
+  readEditionMeta as readEditionMetaStore,
+  resolveEditionStorageRoot,
+  writeCatalog as writeCatalogStore,
+} from "@/lib/server/asset-store";
 import { buildCoverSrcSet, coverImageUrl } from "@/lib/server/magazine-access";
 
-const emptyCatalog: MagazineCatalog = {
-  currentEditionId: null,
-  editions: [],
-};
+export function normalizeEditionStatus(status?: EditionStatus): EditionStatus {
+  return status === "draft" ? "draft" : "published";
+}
 
-const LEGACY_MAGAZINES_DIR = path.join(STORAGE_ROOT, "magazines");
-
-export async function ensureStorage() {
-  await fs.mkdir(CURRENT_EDITION_DIR, { recursive: true });
-  await fs.mkdir(ARCHIVE_DIR, { recursive: true });
-  try {
-    await fs.access(CATALOG_PATH);
-  } catch {
-    await fs.writeFile(CATALOG_PATH, JSON.stringify(emptyCatalog, null, 2), "utf-8");
-  }
+export function isEditionPublished(record: Pick<EditionRecord, "status">) {
+  return normalizeEditionStatus(record.status) === "published";
 }
 
 export async function readCatalog(): Promise<MagazineCatalog> {
-  await ensureStorage();
-  const raw = await fs.readFile(CATALOG_PATH, "utf-8");
-  return JSON.parse(raw) as MagazineCatalog;
+  const catalog = await readCatalogStore();
+  return {
+    ...catalog,
+    editions: catalog.editions.map((edition) => ({
+      ...edition,
+      status: normalizeEditionStatus(edition.status),
+    })),
+  };
 }
 
 export async function writeCatalog(catalog: MagazineCatalog) {
-  await ensureStorage();
-  await fs.writeFile(CATALOG_PATH, JSON.stringify(catalog, null, 2), "utf-8");
+  await writeCatalogStore(catalog);
 }
 
-async function tryReadMetaAt(storageRoot: string): Promise<EditionMetaFile | null> {
-  try {
-    const raw = await fs.readFile(editionMetaPath(storageRoot), "utf-8");
-    return JSON.parse(raw) as EditionMetaFile;
-  } catch {
-    return null;
-  }
-}
-
-export async function resolveEditionStorageRoot(editionId: string): Promise<string | null> {
-  const catalog = await readCatalog();
-  const primary = storageRootForEdition(editionId, catalog.currentEditionId);
-  if (await tryReadMetaAt(primary)) return primary;
-
-  const legacy = path.join(LEGACY_MAGAZINES_DIR, editionId);
-  if (await tryReadMetaAt(legacy)) return legacy;
-
-  return null;
-}
+export { resolveEditionStorageRoot };
 
 export async function readEditionMeta(id: string): Promise<EditionMetaFile | null> {
-  const root = await resolveEditionStorageRoot(id);
-  if (!root) return null;
-  return tryReadMetaAt(root);
+  const meta = await readEditionMetaStore(id);
+  if (!meta) return null;
+  return {
+    ...meta,
+    status: normalizeEditionStatus(meta.status),
+  };
 }
 
 export function toPublicEdition(meta: EditionMetaFile, isCurrent: boolean) {
@@ -73,6 +49,7 @@ export function toPublicEdition(meta: EditionMetaFile, isCurrent: boolean) {
     summary: meta.summary,
     pageCount: meta.pageCount,
     publishedAt: meta.publishedAt,
+    status: normalizeEditionStatus(meta.status),
     isCurrent,
     coverUrl: coverImageUrl(meta.id, "mobile", meta.cacheVersion),
     coverSrcSet: buildCoverSrcSet(meta.id, meta.cacheVersion),
@@ -82,8 +59,13 @@ export function toPublicEdition(meta: EditionMetaFile, isCurrent: boolean) {
 export async function getCurrentEdition() {
   const catalog = await readCatalog();
   if (!catalog.currentEditionId) return null;
+
+  const record = catalog.editions.find((e) => e.id === catalog.currentEditionId);
+  if (!record || !isEditionPublished(record)) return null;
+
   const meta = await readEditionMeta(catalog.currentEditionId);
-  if (!meta) return null;
+  if (!meta || !isEditionPublished(meta)) return null;
+
   return toPublicEdition(meta, true);
 }
 
@@ -93,8 +75,12 @@ export async function getArchiveEditions() {
 
   for (const edition of catalog.editions) {
     if (edition.id === catalog.currentEditionId) continue;
+    if (!isEditionPublished(edition)) continue;
+
     const meta = await readEditionMeta(edition.id);
-    if (meta) archive.push(toPublicEdition(meta, false));
+    if (meta && isEditionPublished(meta)) {
+      archive.push(toPublicEdition(meta, false));
+    }
   }
 
   return archive.sort(
@@ -102,16 +88,43 @@ export async function getArchiveEditions() {
   );
 }
 
-export async function upsertEdition(meta: EditionMetaFile, setAsCurrent: boolean) {
+/** All editions for admin views (includes drafts) */
+export async function getAllEditionsAdmin() {
   const catalog = await readCatalog();
+  const editions: ReturnType<typeof toPublicEdition>[] = [];
 
-  const record = {
+  for (const edition of catalog.editions) {
+    const meta = await readEditionMeta(edition.id);
+    if (meta) {
+      editions.push(toPublicEdition(meta, edition.id === catalog.currentEditionId));
+    }
+  }
+
+  return editions.sort(
+    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+  );
+}
+
+export async function upsertEdition(
+  meta: EditionMetaFile,
+  setAsCurrent: boolean,
+  options?: { preservePublishedAt?: boolean },
+) {
+  const catalog = await readCatalog();
+  const existing = catalog.editions.find((e) => e.id === meta.id);
+  const status = normalizeEditionStatus(meta.status);
+
+  const record: EditionRecord = {
     id: meta.id,
     title: meta.title,
     headline: meta.headline,
     summary: meta.summary,
     pageCount: meta.pageCount,
-    publishedAt: meta.publishedAt,
+    publishedAt:
+      options?.preservePublishedAt && existing?.publishedAt
+        ? existing.publishedAt
+        : meta.publishedAt,
+    status,
     isCurrent: setAsCurrent,
   };
 
@@ -132,4 +145,27 @@ export async function upsertEdition(meta: EditionMetaFile, setAsCurrent: boolean
 
   await writeCatalog(catalog);
   return record;
+}
+
+export async function setEditionStatus(editionId: string, status: EditionStatus) {
+  const meta = await readEditionMeta(editionId);
+  if (!meta) throw new Error("Edition not found");
+
+  const updated: EditionMetaFile = {
+    ...meta,
+    status,
+    cacheVersion: new Date().toISOString(),
+  };
+
+  const { writeEditionMeta } = await import("@/lib/server/asset-store");
+  await writeEditionMeta(editionId, updated);
+
+  const catalog = await readCatalog();
+  const idx = catalog.editions.findIndex((e) => e.id === editionId);
+  if (idx >= 0) {
+    catalog.editions[idx] = { ...catalog.editions[idx], status };
+    await writeCatalog(catalog);
+  }
+
+  return updated;
 }

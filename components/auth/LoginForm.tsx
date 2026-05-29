@@ -9,6 +9,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const isAdminLogin = callbackUrl.includes("/admin");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,6 +36,32 @@ export function LoginForm() {
 
     router.push(callbackUrl);
     router.refresh();
+  }
+
+  if (isAdminLogin) {
+    return (
+      <div className="space-y-6">
+        <p className="rounded-xl border border-border bg-card-muted px-4 py-3 text-sm text-muted">
+          Admin access requires Google sign-in with an approved admin email address.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => signIn("google", { callbackUrl })}
+          className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-white py-3.5 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+        >
+          <GoogleIcon />
+          Continue with Google
+        </button>
+
+        <p className="text-center text-sm text-muted">
+          Not an admin?{" "}
+          <Link href="/" className="font-semibold text-foreground hover:underline">
+            Return to site
+          </Link>
+        </p>
+      </div>
+    );
   }
 
   return (

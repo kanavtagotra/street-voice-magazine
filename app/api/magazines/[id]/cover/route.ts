@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readEditionMeta, resolveEditionStorageRoot } from "@/lib/server/catalog";
+import { requireAdminSession } from "@/lib/auth/guards";
+import { isEditionPublished, readEditionMeta } from "@/lib/server/catalog";
 import { assetResponseHeaders, CDN_CACHE_COVER } from "@/lib/server/cdn";
 import { resolveCoverFile } from "@/lib/server/image-variants";
 import type { CoverVariant } from "@/lib/magazine-assets";
@@ -25,12 +26,12 @@ export async function GET(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Edition not found" }, { status: 404 });
   }
 
-  const storageRoot = await resolveEditionStorageRoot(id);
-  if (!storageRoot) {
-    return NextResponse.json({ error: "Cover not found" }, { status: 404 });
+  const admin = await requireAdminSession();
+  if (!isEditionPublished(meta) && !admin) {
+    return NextResponse.json({ error: "Edition not published" }, { status: 404 });
   }
 
-  const file = await resolveCoverFile(storageRoot, variant);
+  const file = await resolveCoverFile(id, variant);
   if (!file) {
     return NextResponse.json({ error: "Cover not found" }, { status: 404 });
   }

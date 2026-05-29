@@ -3,6 +3,7 @@ import { Container } from "@/components/layout/Container";
 import { ReadAccessCTA } from "@/components/auth/ReadAccessCTA";
 import {
   getCurrentEdition,
+  isEditionPublished,
   readEditionMeta,
   toPublicEdition,
 } from "@/lib/server/catalog";
@@ -16,7 +17,7 @@ export async function Hero() {
   let featured = current;
   if (settings.featuredEditionId && settings.featuredEditionId !== current?.id) {
     const meta = await readEditionMeta(settings.featuredEditionId);
-    if (meta) {
+    if (meta && isEditionPublished(meta)) {
       featured = toPublicEdition(meta, meta.id === current?.id);
     }
   }

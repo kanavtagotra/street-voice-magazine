@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, forbiddenResponse } from "@/lib/auth/guards";
 import { processPdfMagazine, slugify } from "@/lib/server/pdf-processor";
+import type { EditionStatus } from "@/lib/types/magazine";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -41,6 +42,8 @@ export async function POST(request: NextRequest) {
     const summary = String(formData.get("summary") ?? "").trim();
     const customId = String(formData.get("id") ?? "").trim();
     const setAsCurrent = formData.get("setAsCurrent") !== "false";
+    const publishNow = formData.get("publishNow") === "true";
+    const publishedAtRaw = String(formData.get("publishedAt") ?? "").trim();
 
     if (!title || !headline) {
       return NextResponse.json(
@@ -54,6 +57,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid edition id" }, { status: 400 });
     }
 
+    const status: EditionStatus = publishNow ? "published" : "draft";
+    const publishedAt = publishedAtRaw
+      ? new Date(publishedAtRaw).toISOString()
+      : new Date().toISOString();
+
     console.log(`[magazine-upload] Starting: ${file.name} (${file.size} bytes) → ${id}`);
 
     const pdfBuffer = Buffer.from(await file.arrayBuffer());
@@ -65,6 +73,8 @@ export async function POST(request: NextRequest) {
       summary: summary || `${title} — Street Voice Magazine edition.`,
       pdfBuffer,
       setAsCurrent,
+      status,
+      publishedAt,
     });
 
     console.log(
@@ -77,6 +87,7 @@ export async function POST(request: NextRequest) {
         id: result.id,
         title: result.meta.title,
         pageCount: result.pageCount,
+        status: result.meta.status,
         isCurrent: setAsCurrent,
         storageRoot: result.storageRoot,
         coverUrl: `/api/magazines/${result.id}/cover?v=mobile`,

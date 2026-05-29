@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readEditionMeta, resolveEditionStorageRoot } from "@/lib/server/catalog";
+import { isEditionPublished, readEditionMeta } from "@/lib/server/catalog";
 import { assetResponseHeaders } from "@/lib/server/cdn";
 import { resolvePageFile } from "@/lib/server/image-variants";
 import { isCurrentEdition } from "@/lib/server/magazine-access";
@@ -36,13 +36,12 @@ export async function GET(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Invalid page" }, { status: 400 });
   }
 
-  const [meta, allowed, storageRoot] = await Promise.all([
+  const [meta, allowed] = await Promise.all([
     readEditionMeta(editionId),
     isCurrentEdition(editionId),
-    resolveEditionStorageRoot(editionId),
   ]);
 
-  if (!meta || !allowed || !storageRoot) {
+  if (!meta || !allowed || !isEditionPublished(meta)) {
     return NextResponse.json({ error: "Edition unavailable" }, { status: 403 });
   }
 
@@ -50,7 +49,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Page not found" }, { status: 404 });
   }
 
-  const file = await resolvePageFile(storageRoot, pageNum, variant);
+  const file = await resolvePageFile(editionId, pageNum, variant);
   if (!file) {
     return NextResponse.json({ error: "Page not found" }, { status: 404 });
   }

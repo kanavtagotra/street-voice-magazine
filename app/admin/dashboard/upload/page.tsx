@@ -9,8 +9,8 @@ export default function AdminUploadPage() {
         </p>
         <h2 className="mt-1 text-2xl font-semibold">Upload magazine PDF</h2>
         <p className="mt-2 text-sm text-muted">
-          Drag and drop a PDF to extract the cover, convert pages to WebP, and publish as
-          the current edition. Previous current editions are archived automatically.
+          Upload a PDF to extract the cover, convert pages to WebP, and save as a draft or
+          publish immediately. Replace existing editions from the Editions tab.
         </p>
       </div>
       <AdminUploadForm />
