@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1067" fill="none">
+  <rect width="800" height="1067" fill="#fff"/>
+  <text x="40" y="80" fill="#1d4ed8" font-family="system-ui,sans-serif" font-size="14" font-weight="600" letter-spacing="3">NATIONAL AFFAIRS</text>
+  <text x="40" y="150" fill="#0f172a" font-family="system-ui,sans-serif" font-size="34" font-weight="600">Policy In Motion</text>
+  <rect x="40" y="200" width="720" height="2" fill="#e2e8f0"/>
+  <text x="40" y="280" fill="#64748b" font-family="system-ui,sans-serif" font-size="17">Legislation, governance, and the voices driving reform.</text>
+</svg>

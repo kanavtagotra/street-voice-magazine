@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1067" fill="none">
+  <rect width="800" height="1067" fill="#1e293b"/>
+  <rect x="0" y="0" width="800" height="400" fill="#334155"/>
+  <text x="40" y="480" fill="#fca5a5" font-family="system-ui,sans-serif" font-size="14" letter-spacing="3">COVER STORY</text>
+  <text x="40" y="560" fill="#fff" font-family="system-ui,sans-serif" font-size="40" font-weight="600">Urban India At A Crossroads</text>
+  <text x="40" y="620" fill="#cbd5e1" font-family="system-ui,sans-serif" font-size="18">Cities, citizens, and the new social contract.</text>
+</svg>

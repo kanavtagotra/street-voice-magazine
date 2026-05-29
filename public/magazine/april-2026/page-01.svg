@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1067" fill="none">
+  <rect width="800" height="1067" fill="#0f172a"/>
+  <rect width="800" height="220" fill="#b91c1c"/>
+  <text x="40" y="80" fill="#fecaca" font-family="system-ui,sans-serif" font-size="14" letter-spacing="4">APRIL 2026</text>
+  <text x="40" y="150" fill="#fff" font-family="system-ui,sans-serif" font-size="48" font-weight="700" letter-spacing="2">STREET VOICE</text>
+  <text x="40" y="320" fill="#e2e8f0" font-family="system-ui,sans-serif" font-size="22" letter-spacing="3">COVER STORY</text>
+  <text x="40" y="400" fill="#fff" font-family="system-ui,sans-serif" font-size="42" font-weight="600">The New Urban India</text>
+  <text x="40" y="460" fill="#94a3b8" font-family="system-ui,sans-serif" font-size="20">Ideas shaping tomorrow's streets</text>
+</svg>
