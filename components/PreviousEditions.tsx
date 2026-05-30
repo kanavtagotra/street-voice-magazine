@@ -1,58 +1,54 @@
-import { CoverCard } from "@/components/layout/CoverCard";
+import Link from "next/link";
 import { Container } from "@/components/layout/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { getArchiveEditions } from "@/lib/server/catalog";
 import { archiveNotice } from "@/lib/data";
+import { getPdfArchive } from "@/lib/server/pdf-magazine-store";
 
 export async function ArchiveSection() {
-  const archive = await getArchiveEditions();
+  const archive = await getPdfArchive();
 
   return (
-    <section id="archive" className="scroll-mt-28 py-16 sm:py-24">
-      <Container className="space-y-10">
+    <section id="archive" className="scroll-mt-28 border-t border-border bg-card-muted/40 py-16 sm:py-24">
+      <Container>
         <SectionHeader
           eyebrow="Archive"
-          title="Previous Editions"
+          title="Previous editions"
           description={archiveNotice}
         />
 
         {archive.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border bg-card px-6 py-10 text-center text-sm text-muted">
-            When a new edition is published, previous issues will appear here as
-            cover previews with edition details.
-          </p>
+          <p className="mt-8 text-sm text-muted">No archived editions yet.</p>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {archive.map((edition) => (
-              <article
+          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {archive.slice(0, 3).map((edition) => (
+              <li
                 key={edition.id}
-                className="group rounded-2xl border border-border bg-card p-4 shadow-lg shadow-zinc-300/20 transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-xl dark:shadow-black/20 dark:hover:border-white/20"
+                className="rounded-2xl border border-border bg-card p-5 shadow-md shadow-zinc-300/10 dark:shadow-black/20"
               >
-                <CoverCard
-                  src={edition.coverUrl}
-                  srcSet={edition.coverSrcSet}
-                  alt={`${edition.title} cover`}
-                />
-                <div className="mt-4 space-y-2 px-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700 dark:text-blue-400/90">
-                    {edition.title}
-                  </p>
-                  <h3 className="text-base font-semibold text-foreground">{edition.headline}</h3>
-                  <p className="line-clamp-2 text-sm leading-relaxed text-muted">
-                    {edition.summary}
-                  </p>
-                  <span className="inline-flex rounded-full border border-border bg-card-muted px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
-                    Cover preview only
-                  </span>
-                </div>
-              </article>
+                <h3 className="font-semibold">{edition.title}</h3>
+                <p className="mt-1 text-sm text-muted">
+                  {new Date(edition.uploadedAt).toLocaleDateString()}
+                </p>
+                <a
+                  href={edition.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex text-sm font-semibold text-red-600 dark:text-red-400"
+                >
+                  View PDF →
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
+
+        <Link
+          href="/archive"
+          className="mt-8 inline-flex rounded-full border border-border px-5 py-2.5 text-sm font-semibold hover:bg-card"
+        >
+          View full archive
+        </Link>
       </Container>
     </section>
   );
 }
-
-/** @alias ArchiveSection */
-export const PreviousEditions = ArchiveSection;

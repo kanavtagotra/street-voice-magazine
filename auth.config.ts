@@ -16,6 +16,9 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user;
       const isAdmin = auth?.user?.role === "admin";
 
+      if (pathname === "/admin") {
+        return true;
+      }
       if (pathname.startsWith("/admin/dashboard")) {
         return isAdmin;
       }
@@ -37,7 +40,9 @@ export const authConfig = {
         token.email = user.email ?? token.email;
         token.name = user.name ?? token.name;
         token.picture = user.image ?? token.picture;
-        token.role = resolveRoleFromEmail(user.email ?? token.email);
+        token.role = (user.role as UserRole) ?? resolveRoleFromEmail(user.email ?? token.email);
+      } else if (token.role) {
+        return token;
       } else if (token.email) {
         token.role = resolveRoleFromEmail(String(token.email));
       }

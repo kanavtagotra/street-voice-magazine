@@ -5,7 +5,8 @@ export default NextAuth(authConfig).auth;
 
 export const config = {
   matcher: [
-    "/admin/dashboard/:path*",
+    "/admin",
+    "/admin/:path*",
     "/read",
     "/profile/:path*",
     "/api/admin/:path*",

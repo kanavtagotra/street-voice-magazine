@@ -3,13 +3,13 @@ export const readRoute = "/read";
 export const navLinks = [
   { label: "Home", href: "/#home" },
   { label: "Latest Edition", href: "/#latest" },
-  { label: "Archive", href: "/#archive" },
+  { label: "Archive", href: "/archive" },
   { label: "About", href: "/#about" },
   { label: "Contact", href: "/#contact" },
 ] as const;
 
 export const archiveNotice =
-  "Previous editions show cover previews and metadata only. Full issues are not available for online reading.";
+  "Browse every previously uploaded edition in the archive. The latest active issue appears on the home page automatically.";
 
 export const socialLinks = [
   { label: "Instagram", href: "https://instagram.com" },
