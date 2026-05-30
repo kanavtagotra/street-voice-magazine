@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import { resolveRoleFromEmail } from "@/lib/auth/roles";
 import type { UserRole } from "@/lib/types/user";
 
 export const authConfig = {
@@ -32,8 +33,13 @@ export const authConfig = {
     },
     jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = (user.role as UserRole) ?? "user";
+        token.id = user.id ?? token.sub;
+        token.email = user.email ?? token.email;
+        token.name = user.name ?? token.name;
+        token.picture = user.image ?? token.picture;
+        token.role = resolveRoleFromEmail(user.email ?? token.email);
+      } else if (token.email) {
+        token.role = resolveRoleFromEmail(String(token.email));
       }
       return token;
     },

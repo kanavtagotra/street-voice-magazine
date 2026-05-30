@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sessionToPublicUser } from "@/lib/auth/session-user";
 import { requireUser, unauthorizedResponse } from "@/lib/auth/guards";
-import { findUserById, toPublicUser, updateUserProfile } from "@/lib/server/users";
 
 export const runtime = "nodejs";
 
@@ -8,10 +8,7 @@ export async function GET() {
   const session = await requireUser();
   if (!session) return unauthorizedResponse();
 
-  const user = await findUserById(session.user.id);
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-  return NextResponse.json({ user: toPublicUser(user) });
+  return NextResponse.json({ user: sessionToPublicUser(session) });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -19,14 +16,15 @@ export async function PATCH(request: NextRequest) {
   if (!session) return unauthorizedResponse();
 
   const body = (await request.json()) as { name?: string; image?: string };
-  const updated = await updateUserProfile(session.user.id, {
-    name: body.name,
-    image: body.image,
-  });
+  const user = sessionToPublicUser(session);
 
-  if (!updated) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  if (body.name?.trim()) {
+    user.name = body.name.trim();
+  }
+  if (body.image) {
+    user.image = body.image;
   }
 
-  return NextResponse.json({ user: updated });
+  // Profile fields come from the OAuth session; updates are not persisted server-side.
+  return NextResponse.json({ user });
 }

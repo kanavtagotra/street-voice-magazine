@@ -2,136 +2,51 @@
 
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 export function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
   const isAdminLogin = callbackUrl.includes("/admin");
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  async function onSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    setLoading(false);
-
-    if (result?.error) {
-      setError("Invalid email or password");
-      return;
-    }
-
-    router.push(callbackUrl);
-    router.refresh();
-  }
-
-  if (isAdminLogin) {
-    return (
-      <div className="space-y-6">
-        <p className="rounded-xl border border-border bg-card-muted px-4 py-3 text-sm text-muted">
-          Admin access requires Google sign-in with an approved admin email address.
-        </p>
-
-        <button
-          type="button"
-          onClick={() => signIn("google", { callbackUrl })}
-          className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-white py-3.5 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
-        >
-          <GoogleIcon />
-          Continue with Google
-        </button>
-
-        <p className="text-center text-sm text-muted">
-          Not an admin?{" "}
-          <Link href="/" className="font-semibold text-foreground hover:underline">
-            Return to site
-          </Link>
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
+      {isAdminLogin ? (
+        <p className="rounded-xl border border-border bg-card-muted px-4 py-3 text-sm text-muted">
+          Admin access requires Google sign-in with the email configured in{" "}
+          <code className="text-xs">ADMIN_EMAIL</code>.
+        </p>
+      ) : (
+        <p className="rounded-xl border border-border bg-card-muted px-4 py-3 text-sm text-muted">
+          Sign in with Google to read the current edition and manage your profile.
+        </p>
+      )}
+
       <button
         type="button"
         onClick={() => signIn("google", { callbackUrl })}
-        className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-white py-3 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+        className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-white py-3.5 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
       >
         <GoogleIcon />
         Continue with Google
       </button>
 
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase tracking-wider">
-          <span className="bg-card px-3 text-muted">or email</span>
-        </div>
-      </div>
-
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
-            Email
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-red-500/30"
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
-            Password
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-            className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-red-500/30"
-          />
-        </div>
-
-        {error ? (
-          <p className="rounded-xl border border-red-500/30 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-            {error}
-          </p>
-        ) : null}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-full bg-zinc-900 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
-        >
-          {loading ? "Signing in…" : "Sign in"}
-        </button>
-      </form>
-
       <p className="text-center text-sm text-muted">
-        New here?{" "}
-        <Link href="/signup" className="font-semibold text-foreground hover:underline">
-          Create an account
-        </Link>
+        {isAdminLogin ? (
+          <>
+            Not an admin?{" "}
+            <Link href="/" className="font-semibold text-foreground hover:underline">
+              Return to site
+            </Link>
+          </>
+        ) : (
+          <>
+            New here?{" "}
+            <Link href="/signup" className="font-semibold text-foreground hover:underline">
+              Create an account
+            </Link>
+          </>
+        )}
       </p>
     </div>
   );

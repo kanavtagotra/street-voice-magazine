@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser, unauthorizedResponse } from "@/lib/auth/guards";
 import type { ReadingPreferences } from "@/lib/types/user";
-import { findUserById, toPublicUser, updateUserPreferences } from "@/lib/server/users";
 
 export const runtime = "nodejs";
 
@@ -9,10 +8,8 @@ export async function GET() {
   const session = await requireUser();
   if (!session) return unauthorizedResponse();
 
-  const user = await findUserById(session.user.id);
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-  return NextResponse.json({ preferences: user.preferences });
+  // Reading preferences are stored in the browser (localStorage), not on the server.
+  return NextResponse.json({ preferences: {} });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -20,11 +17,7 @@ export async function PATCH(request: NextRequest) {
   if (!session) return unauthorizedResponse();
 
   const body = (await request.json()) as ReadingPreferences;
-  const updated = await updateUserPreferences(session.user.id, body);
 
-  if (!updated) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
-
-  return NextResponse.json({ user: updated });
+  // Acknowledge without filesystem persistence; client saves to localStorage.
+  return NextResponse.json({ preferences: body });
 }

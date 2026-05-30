@@ -2,6 +2,10 @@
 
 import type { Session } from "next-auth";
 import { useEffect, useState } from "react";
+import {
+  loadReadingPreferences,
+  saveReadingPreferences,
+} from "@/lib/auth/reading-preferences";
 import type { ReadingPreferences } from "@/lib/types/user";
 
 type ProfilePanelProps = {
@@ -15,12 +19,7 @@ export function ProfilePanel({ user }: ProfilePanelProps) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch("/api/user/preferences")
-      .then((r) => r.json())
-      .then((data: { preferences?: ReadingPreferences }) => {
-        if (data.preferences) setPrefs(data.preferences);
-      })
-      .catch(() => undefined);
+    setPrefs(loadReadingPreferences());
   }, []);
 
   async function saveProfile() {
@@ -32,19 +31,15 @@ export function ProfilePanel({ user }: ProfilePanelProps) {
       body: JSON.stringify({ name }),
     });
     setSaving(false);
-    setStatus(res.ok ? "Profile saved." : "Could not save profile.");
+    setStatus(res.ok ? "Display name updated for this session." : "Could not save profile.");
   }
 
-  async function savePreferences() {
+  function savePreferences() {
     setSaving(true);
     setStatus(null);
-    const res = await fetch("/api/user/preferences", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(prefs),
-    });
+    saveReadingPreferences(prefs);
     setSaving(false);
-    setStatus(res.ok ? "Reading preferences saved." : "Could not save preferences.");
+    setStatus("Reading preferences saved on this device.");
   }
 
   return (
@@ -64,6 +59,9 @@ export function ProfilePanel({ user }: ProfilePanelProps) {
 
       <section className="rounded-3xl border border-border bg-card p-6 shadow-lg shadow-zinc-300/20 dark:shadow-black/30">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">Display name</h2>
+        <p className="mt-1 text-xs text-muted">
+          Managed by Google sign-in; local edits apply to this session only.
+        </p>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -83,6 +81,7 @@ export function ProfilePanel({ user }: ProfilePanelProps) {
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
           Reading preferences
         </h2>
+        <p className="mt-1 text-xs text-muted">Saved locally on this device.</p>
         <div className="mt-4 space-y-4">
           <div>
             <label className="text-xs font-medium text-muted">Default page quality</label>
@@ -116,7 +115,7 @@ export function ProfilePanel({ user }: ProfilePanelProps) {
         </div>
         <button
           type="button"
-          onClick={() => void savePreferences()}
+          onClick={savePreferences}
           disabled={saving}
           className="mt-4 rounded-full border border-border px-5 py-2.5 text-sm font-semibold transition hover:bg-card-muted"
         >
