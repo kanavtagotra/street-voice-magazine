@@ -21,6 +21,7 @@ export default async function ArchivePage() {
         <section className="pb-12 pt-6 sm:pb-16">
           <Container>
             <SectionHeader
+              onHero
               eyebrow="Archive"
               title="Previous editions"
               description="Every uploaded issue remains available here. The active edition is marked below."

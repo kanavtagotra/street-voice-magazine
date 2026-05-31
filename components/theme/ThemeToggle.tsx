@@ -39,11 +39,17 @@ function MoonIcon({ className }: { className?: string }) {
 
 type ThemeToggleProps = {
   className?: string;
+  /** When true, styled for the dark gradient hero (theme-independent background). */
+  onHero?: boolean;
 };
 
-export function ThemeToggle({ className = "" }: ThemeToggleProps) {
+export function ThemeToggle({ className = "", onHero = false }: ThemeToggleProps) {
   const { resolvedTheme, toggleTheme, mounted } = useTheme();
   const isDark = resolvedTheme === "dark";
+
+  const surfaceClass = onHero
+    ? "border-white/15 bg-white/10 text-white shadow-none hover:bg-white/15"
+    : "border-zinc-300/90 bg-white/90 text-zinc-800 shadow-md shadow-zinc-300/40 dark:border-white/15 dark:bg-white/10 dark:text-white dark:shadow-none dark:hover:bg-white/15";
 
   return (
     <button
@@ -51,7 +57,7 @@ export function ThemeToggle({ className = "" }: ThemeToggleProps) {
       onClick={toggleTheme}
       disabled={!mounted}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-zinc-300/90 bg-white/90 text-zinc-800 shadow-md shadow-zinc-300/40 transition-all duration-300 hover:scale-105 disabled:opacity-70 dark:border-white/15 dark:bg-white/10 dark:text-white dark:shadow-none dark:hover:bg-white/15 ${className}`}
+      className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border transition-all duration-300 hover:scale-105 disabled:opacity-70 ${surfaceClass} ${className}`}
     >
       <SunIcon
         className={`absolute h-[18px] w-[18px] transition-all duration-300 ease-out ${

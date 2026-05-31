@@ -16,14 +16,14 @@ export function SectionHeader({
     <div className="max-w-2xl space-y-3">
       <p
         className={`text-xs font-semibold uppercase tracking-[0.22em] ${
-          onHero ? "text-red-700 dark:text-red-400" : "text-red-600 dark:text-red-400"
+          onHero ? "text-red-400" : "text-red-600 dark:text-red-400"
         }`}
       >
         {eyebrow}
       </p>
       <h2
         className={`text-3xl font-semibold tracking-tight sm:text-4xl ${
-          onHero ? "text-zinc-900 dark:text-white" : "text-foreground"
+          onHero ? "text-white" : "text-foreground"
         }`}
       >
         {title}
@@ -31,7 +31,7 @@ export function SectionHeader({
       {description ? (
         <p
           className={`text-base leading-relaxed ${
-            onHero ? "text-zinc-700 dark:text-zinc-400" : "text-muted"
+            onHero ? "text-zinc-400" : "text-muted"
           }`}
         >
           {description}

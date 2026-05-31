@@ -10,7 +10,11 @@ function initials(name?: string | null, email?: string | null) {
   return source.slice(0, 2).toUpperCase();
 }
 
-export function UserMenu() {
+type UserMenuProps = {
+  onHero?: boolean;
+};
+
+export function UserMenu({ onHero = false }: UserMenuProps) {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -27,7 +31,9 @@ export function UserMenu() {
 
   if (status === "loading") {
     return (
-      <div className="h-10 w-10 animate-pulse rounded-full bg-zinc-200 dark:bg-white/10" />
+      <div
+        className={`h-10 w-10 animate-pulse rounded-full ${onHero ? "bg-white/10" : "bg-zinc-200 dark:bg-white/10"}`}
+      />
     );
   }
 
@@ -35,7 +41,11 @@ export function UserMenu() {
     return (
       <Link
         href="/login"
-        className="rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:bg-card-muted"
+        className={
+          onHero
+            ? "rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/40 hover:bg-white/15"
+            : "rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:bg-card-muted"
+        }
       >
         Login
       </Link>
@@ -49,7 +59,11 @@ export function UserMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-border bg-gradient-to-br from-red-500/20 to-blue-500/20 text-xs font-bold text-foreground ring-2 ring-transparent transition hover:ring-red-500/30"
+        className={`flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border bg-gradient-to-br from-red-500/20 to-blue-500/20 text-xs font-bold ring-2 ring-transparent transition hover:ring-red-500/30 ${
+          onHero
+            ? "border-white/20 text-white hover:ring-white/30"
+            : "border-border text-foreground hover:ring-red-500/30"
+        }`}
         aria-expanded={open}
         aria-label="Account menu"
       >

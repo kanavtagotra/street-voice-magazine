@@ -19,7 +19,7 @@ const variants: Record<Variant, string> = {
 };
 
 const heroPrimary =
-  "bg-zinc-900 text-white shadow-xl shadow-zinc-900/20 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:shadow-red-900/20";
+  "bg-white text-zinc-950 shadow-xl shadow-black/25 hover:bg-zinc-100";
 
 export function Button({
   variant = "primary",

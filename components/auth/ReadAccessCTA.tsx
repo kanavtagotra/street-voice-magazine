@@ -40,7 +40,11 @@ export function ReadAccessCTA({
       </Button>
       <Link
         href="/signup"
-        className="text-sm font-medium text-muted transition hover:text-foreground"
+        className={`text-sm font-medium transition ${
+          onHero
+            ? "text-white/70 hover:text-white"
+            : "text-muted hover:text-foreground"
+        }`}
       >
         Create free account
       </Link>
