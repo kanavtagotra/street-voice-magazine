@@ -194,7 +194,7 @@ export function ProtectedMagazineViewer() {
         </p>
         {error === "sign-in" ? (
           <Link
-            href="/login?callbackUrl=/read"
+            href="/sign-in?callbackUrl=/read"
             className="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-zinc-950"
           >
             Sign in

@@ -2,52 +2,195 @@
 
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { AuthAlert } from "@/components/auth/AuthAlert";
+import { GoogleButton } from "@/components/auth/GoogleButton";
+import { AUTH_ERROR_MESSAGES, setAuthIntentCookie } from "@/lib/auth/intent";
+import { isValidEmail, normalizeEmail, validateName, validatePassword } from "@/lib/auth/validation";
 
 export function SignupForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const errorCode = searchParams.get("error");
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(
+    errorCode ? (AUTH_ERROR_MESSAGES[errorCode] ?? null) : null,
+  );
+  const [loading, setLoading] = useState(false);
+
+  async function onEmailSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+
+    const normalized = normalizeEmail(email);
+    if (!isValidEmail(normalized)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
+    const nameError = validateName(name || normalized.split("@")[0]);
+    if (nameError) {
+      setError(nameError);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const check = await fetch(`/api/auth/check-email?email=${encodeURIComponent(normalized)}`);
+      const checkJson = (await check.json()) as { exists?: boolean };
+
+      if (checkJson.exists) {
+        setLoading(false);
+        setError("An account with this email already exists. Please sign in instead.");
+        return;
+      }
+
+      const registerRes = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalized,
+          password,
+          name: name || normalized.split("@")[0],
+        }),
+      });
+
+      const registerJson = (await registerRes.json()) as { error?: string };
+
+      if (!registerRes.ok) {
+        setLoading(false);
+        setError(registerJson.error ?? AUTH_ERROR_MESSAGES.network);
+        return;
+      }
+
+      const result = await signIn("credentials", {
+        email: normalized,
+        password,
+        redirect: false,
+      });
+
+      setLoading(false);
+
+      if (result?.error) {
+        setError("Account created but sign-in failed. Please sign in manually.");
+        return;
+      }
+
+      router.push(callbackUrl);
+      router.refresh();
+    } catch {
+      setLoading(false);
+      setError(AUTH_ERROR_MESSAGES.network);
+    }
+  }
+
+  function onGoogleSignUp() {
+    setAuthIntentCookie("signup");
+    void signIn("google", { callbackUrl });
+  }
+
   return (
     <div className="space-y-6">
-      <p className="rounded-xl border border-border bg-card-muted px-4 py-3 text-sm text-muted">
-        Create your account with Google. No password required.
-      </p>
+      {error ? <AuthAlert message={error} /> : null}
 
-      <button
-        type="button"
-        onClick={() => signIn("google", { callbackUrl: "/" })}
-        className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-white py-3.5 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
-      >
-        <GoogleIcon />
-        Sign up with Google
-      </button>
+      <GoogleButton label="Sign up with Google" onClick={onGoogleSignUp} disabled={loading} />
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs font-medium uppercase tracking-wider text-muted">or</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <form onSubmit={onEmailSubmit} className="space-y-4">
+        <div>
+          <label
+            htmlFor="signup-name"
+            className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted"
+          >
+            Name
+          </label>
+          <input
+            id="signup-name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+            disabled={loading}
+            placeholder="Your name"
+            className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="signup-email"
+            className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted"
+          >
+            Email
+          </label>
+          <input
+            id="signup-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+            disabled={loading}
+            className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="signup-password"
+            className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted"
+          >
+            Password
+          </label>
+          <input
+            id="signup-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            required
+            disabled={loading}
+            minLength={8}
+            className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground"
+          />
+          <p className="mt-1.5 text-xs text-muted">At least 8 characters</p>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-full bg-zinc-900 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60 dark:bg-white dark:text-zinc-950"
+        >
+          {loading ? "Creating account…" : "Create account"}
+        </button>
+      </form>
 
       <p className="text-center text-sm text-muted">
         Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-foreground hover:underline">
+        <Link
+          href={`/sign-in${callbackUrl !== "/" ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`}
+          className="font-semibold text-foreground hover:underline"
+        >
           Sign in
         </Link>
       </p>
     </div>
-  );
-}
-
-function GoogleIcon() {
-  return (
-    <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-      />
-    </svg>
   );
 }

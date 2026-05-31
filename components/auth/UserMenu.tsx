@@ -40,14 +40,14 @@ export function UserMenu({ onHero = false }: UserMenuProps) {
   if (!session?.user) {
     return (
       <Link
-        href="/login"
+        href="/sign-in"
         className={
           onHero
             ? "rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/40 hover:bg-white/15"
             : "rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:bg-card-muted"
         }
       >
-        Login
+        Sign in
       </Link>
     );
   }
@@ -115,7 +115,7 @@ export function UserMenu({ onHero = false }: UserMenuProps) {
           {isAdmin ? (
             <li>
               <Link
-                href="/admin/dashboard"
+                href="/admin"
                 className="block rounded-xl px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
                 onClick={() => setOpen(false)}
               >

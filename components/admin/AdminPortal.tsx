@@ -21,6 +21,7 @@ export function AdminPortal() {
   const [loading, setLoading] = useState(true);
   const [uploadPercent, setUploadPercent] = useState(0);
   const [phase, setPhase] = useState<"idle" | "uploading">("idle");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -93,7 +94,32 @@ export function AdminPortal() {
     xhr.send(formData);
   }
 
-  const busy = phase !== "idle";
+  async function onDelete(id: string, title: string) {
+    if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
+
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/admin/pdf/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const json = (await res.json()) as { error?: string; message?: string };
+
+      if (!res.ok) {
+        toastError(json.error ?? "Delete failed");
+        return;
+      }
+
+      success(json.message ?? "Edition deleted.");
+      load();
+    } catch {
+      toastError("Network error during delete");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  const busy = phase !== "idle" || deletingId !== null;
 
   return (
     <div className="space-y-8">
@@ -240,14 +266,24 @@ export function AdminPortal() {
                     {edition.isActive ? " · Active" : ""}
                   </p>
                 </div>
-                <a
-                  href={edition.pdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-semibold text-red-600 dark:text-red-400"
-                >
-                  View PDF
-                </a>
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={edition.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-semibold text-red-600 dark:text-red-400"
+                  >
+                    View PDF
+                  </a>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onDelete(edition.id, edition.title)}
+                    className="text-sm font-semibold text-muted transition hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400"
+                  >
+                    {deletingId === edition.id ? "Deleting…" : "Delete"}
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

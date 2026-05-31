@@ -1,18 +1,18 @@
-import { AuthShell } from "@/components/auth/AuthShell";
-import { SignupForm } from "@/components/auth/SignupForm";
+import { redirect } from "next/navigation";
 
-export const metadata = {
-  title: "Create account",
-  robots: { index: false },
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default function SignupPage() {
-  return (
-    <AuthShell
-      title="Join Street Voice"
-      subtitle="Create a free account to read the latest digital edition."
-    >
-      <SignupForm />
-    </AuthShell>
-  );
+export default async function SignupRedirectPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const query = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string") query.set(key, value);
+    else if (Array.isArray(value) && value[0]) query.set(key, value[0]);
+  }
+
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  redirect(`/sign-up${suffix}`);
 }

@@ -1,10 +1,13 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AuthAlert } from "@/components/auth/AuthAlert";
 
 export function AdminLoginForm() {
-  const [username, setUsername] = useState("");
+  const router = useRouter();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -14,33 +17,41 @@ export function AdminLoginForm() {
     setError(null);
     setLoading(true);
 
-    const result = await signIn("admin-credentials", {
-      username,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("admin-credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    setLoading(false);
+      setLoading(false);
 
-    if (result?.error) {
-      setError("Invalid username or password");
-      return;
+      if (result?.error) {
+        setError("Invalid admin email or password.");
+        return;
+      }
+
+      router.push("/admin");
+      router.refresh();
+    } catch {
+      setLoading(false);
+      setError("Network error. Please try again.");
     }
-
-    window.location.reload();
   }
 
   return (
     <form onSubmit={onSubmit} className="mx-auto w-full max-w-md space-y-5">
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
-          Username
+          Admin email
         </label>
         <input
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
-          autoComplete="username"
+          autoComplete="email"
+          disabled={loading}
           className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm"
         />
       </div>
@@ -54,15 +65,12 @@ export function AdminLoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           required
           autoComplete="current-password"
+          disabled={loading}
           className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm"
         />
       </div>
 
-      {error ? (
-        <p className="rounded-xl border border-red-500/30 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-          {error}
-        </p>
-      ) : null}
+      {error ? <AuthAlert message={error} /> : null}
 
       <button
         type="submit"

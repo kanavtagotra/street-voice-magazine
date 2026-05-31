@@ -202,3 +202,28 @@ export async function uploadPdfMagazine(input: UploadPdfInput): Promise<PdfEditi
 
   return edition;
 }
+
+export async function deletePdfEdition(id: string): Promise<boolean> {
+  const catalog = await readPdfCatalog();
+  const index = catalog.editions.findIndex((e) => e.id === id);
+  if (index < 0) return false;
+
+  const [removed] = catalog.editions.splice(index, 1);
+
+  if (catalog.activeEditionId === id) {
+    catalog.activeEditionId = catalog.editions[0]?.id ?? null;
+  }
+
+  await writePdfCatalog(catalog);
+
+  if (!isPdfBlobStorageEnabled()) {
+    try {
+      await fs.unlink(path.join(LOCAL_PDF_DIR, `${id}.pdf`));
+    } catch {
+      // ignore missing local file
+    }
+  }
+
+  void removed;
+  return true;
+}

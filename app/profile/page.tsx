@@ -12,7 +12,7 @@ export const metadata = {
 
 export default async function ProfilePage() {
   const session = await auth();
-  if (!session?.user) redirect("/login?callbackUrl=/profile");
+  if (!session?.user) redirect("/sign-in?callbackUrl=/profile");
 
   return (
     <div className="min-h-screen bg-background text-foreground">

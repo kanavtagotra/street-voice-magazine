@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Logo } from "@/components/layout/Logo";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
@@ -15,9 +14,7 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps) {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_0%,rgba(248,113,113,0.25),transparent_50%)] dark:bg-[radial-gradient(ellipse_at_30%_0%,rgba(220,38,38,0.2),transparent_50%)]" />
 
       <header className="relative z-10 flex items-center justify-between px-5 py-5 sm:px-8">
-        <Link href="/">
-          <Logo />
-        </Link>
+        <Logo />
         <ThemeToggle />
       </header>
 

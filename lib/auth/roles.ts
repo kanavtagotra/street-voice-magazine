@@ -7,15 +7,12 @@ export function resolveRoleFromEmail(email: string | null | undefined): UserRole
   return email.trim().toLowerCase() === adminEmail ? "admin" : "user";
 }
 
-/** Admin login at /admin via ADMIN_USERNAME and ADMIN_PASSWORD. */
-export function verifyAdminCredentials(
-  username: string,
-  password: string,
-): boolean {
-  const adminUsername = process.env.ADMIN_USERNAME?.trim();
+/** Admin login at /admin via ADMIN_EMAIL and ADMIN_PASSWORD. */
+export function verifyAdminCredentials(email: string, password: string): boolean {
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD?.trim();
 
-  if (!adminUsername || !adminPassword) return false;
+  if (!adminEmail || !adminPassword) return false;
 
-  return username === adminUsername && password === adminPassword;
+  return email.trim().toLowerCase() === adminEmail && password === adminPassword;
 }

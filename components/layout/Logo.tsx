@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { siteConfig } from "@/lib/data";
 
 type LogoProps = {
@@ -8,7 +9,7 @@ type LogoProps = {
 
 export function Logo({ className = "", onHero = false }: LogoProps) {
   return (
-    <a href="/#home" className={`group flex items-center gap-3 ${className}`}>
+    <Link href="/#home" className={`group flex items-center gap-3 ${className}`}>
       <span className="h-9 w-1 rounded-full bg-gradient-to-b from-red-500 to-blue-600 transition group-hover:scale-y-110" />
       <span
         className={`text-sm font-semibold tracking-[0.14em] sm:text-base ${
@@ -17,6 +18,6 @@ export function Logo({ className = "", onHero = false }: LogoProps) {
       >
         {siteConfig.shortName.toUpperCase()}
       </span>
-    </a>
+    </Link>
   );
 }

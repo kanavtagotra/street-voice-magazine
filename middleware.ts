@@ -5,11 +5,6 @@ export default NextAuth(authConfig).auth;
 
 export const config = {
   matcher: [
-    "/admin",
-    "/admin/:path*",
-    "/read",
-    "/profile/:path*",
-    "/api/admin/:path*",
-    "/api/reader/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

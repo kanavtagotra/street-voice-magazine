@@ -15,7 +15,7 @@ export function ReadAccessCTA({
   label = "Read Latest Edition",
 }: ReadAccessCTAProps) {
   const { data: session, status } = useSession();
-  const loginHref = `/login?callbackUrl=${encodeURIComponent(readRoute)}`;
+  const loginHref = `/sign-in?callbackUrl=${encodeURIComponent(readRoute)}`;
 
   if (status === "loading") {
     return (
@@ -39,7 +39,7 @@ export function ReadAccessCTA({
         Sign in to read
       </Button>
       <Link
-        href="/signup"
+        href={`/sign-up?callbackUrl=${encodeURIComponent(readRoute)}`}
         className={`text-sm font-medium transition ${
           onHero
             ? "text-white/70 hover:text-white"

@@ -1,21 +1,18 @@
-import { Suspense } from "react";
-import { AuthShell } from "@/components/auth/AuthShell";
-import { LoginForm } from "@/components/auth/LoginForm";
+import { redirect } from "next/navigation";
 
-export const metadata = {
-  title: "Sign in",
-  robots: { index: false },
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default function LoginPage() {
-  return (
-    <AuthShell
-      title="Welcome back"
-      subtitle="Sign in to read the current edition and manage your profile."
-    >
-      <Suspense fallback={<p className="text-center text-sm text-muted">Loading…</p>}>
-        <LoginForm />
-      </Suspense>
-    </AuthShell>
-  );
+export default async function LoginRedirectPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const query = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string") query.set(key, value);
+    else if (Array.isArray(value) && value[0]) query.set(key, value[0]);
+  }
+
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  redirect(`/sign-in${suffix}`);
 }
